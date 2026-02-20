@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Neon Drift - GitHub Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    
+    <style>
+        /* CSS: Game ki Styling */
+        body {
+            margin: 0;
+            background-color: #050505;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas {
+            border: 5px solid #00ffcc;
+            box-shadow: 0 0 30px #00ffcc;
+            border-radius: 15px;
+        }
+        .ui-panel {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .controls {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #ff0055;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui-panel">
+        <h1>🏎️ NEON F1 RACER</h1>
+        <div id="stats">Speed: 0 km/h</div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div class="controls">
+        ARROWS to Drive | SHIFT to Drift | SPACE to Boost
+    </div>
+
+<script>
+// JavaScript: Game Logic aur Physics
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    parent: 'game-container',
+    physics: {
+        default: 'arcade',
+        arcade: { debug: false }
+    },
+    scene: { preload: preload, create: create, update: update }
+};
+
+let car, cursors, statsText;
+let speed = 0;
+let maxSpeed = 350;
+let acceleration = 8;
+let driftFactor = 0.94; // Road friction
+let isDrifting = false;
+
+const game = new Phaser.Game(config);
+
+function preload() {
+    // F1 Car Sprite
+    this.load.image('f1car', 'https://labs.phaser.io/assets/sprites/f1-car.png');
+}
+
+function create() {
+    // 1. Track Design (Neon Lines)
+    let graphics = this.add.graphics();
+    graphics.lineStyle(10, 0x00ffcc, 1);
+    
+    // Draw a simple oval track
+    graphics.strokeRoundedRect(50, 50, 700, 500, 150);
+    graphics.lineStyle(5, 0xff0055, 0.5);
+    graphics.strokeRoundedRect(150, 150, 500, 300, 80);
+
+    // 2. F1 Car Physics Setup
+    car = this.physics.add.sprite(400, 100, 'f1car');
+    car.setOrigin(0.5, 0.5);
+    car.setScale(0.7);
+    car.setAngle(0);
+    
+    // 3. Input Controls
+    cursors = this.input.keyboard.createCursorKeys();
+    shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    statsText = document.getElementById('stats');
+}
+
+function update() {
+    // --- Drifting Logic ---
+    if (shiftKey.isDown) {
+        driftFactor = 0.98; // Friction kam ho jayegi
+        maxSpeed = 400;     // Drift mein speed badh sakti hai
+    } else {
+        driftFactor = 0.94;
+        maxSpeed = 350;
+    }
+
+    // --- Acceleration & Braking ---
+    if (cursors.up.isDown) {
+        if (speed < maxSpeed) speed += acceleration;
+    } else if (cursors.down.isDown) {
+        if (speed > -100) speed -= acceleration;
+    } else {
+        speed *= driftFactor; // Friction applied
+    }
+
+    // Boost Mode (Space Key)
+    if (spaceKey.isDown && speed > 100) {
+        speed += 5;
+    }
+
+    // --- Steering Logic ---
+    // Car sirf tab turn karegi jab wo move kar rahi ho
+    if (Math.abs(speed) > 20) {
+        let turnAngle = 3.5;
+        if (shiftKey.isDown) turnAngle = 5.5; // Sharp turns while drifting
+
+        if (cursors.left.isDown) {
+            car.angle -= turnAngle;
+        } else if (cursors.right.isDown) {
+            car.angle += turnAngle;
+        }
+    }
+
+    // --- Velocity Update (Trigonometry) ---
+    // Angle ko radians mein convert karke movement set karna
+    const angleInRad = car.rotation;
+    car.body.velocity.x = Math.cos(angleInRad) * speed;
+    car.body.velocity.y = Math.sin(angleInRad) * speed;
+
+    // --- UI Update ---
+    let displaySpeed = Math.round(Math.abs(speed));
+    statsText.innerText = `Speed: ${displaySpeed} km/h ${shiftKey.isDown ? ' | DRIFTING' : ''}`;
+}
+</script>
+
+</body>
+</html>
+
